@@ -1,69 +1,161 @@
-# RISC-V 5-stage pipeline (Verilog)
+# RISC-V 5-Stage Pipeline (Verilog)
 
-Bộ xử lý RISC-V 32-bit theo kiến trúc **pipeline 5 giai đoạn** (IF → ID → EX → MEM → WB), có **forwarding** (bypass) và xử lý **load-use stall** cùng **flush** khi nhánh/nhảy được thực hiện.
+Thiết kế bộ xử lý RISC-V 32-bit theo kiến trúc pipeline 5 giai đoạn:
 
-## Cấu trúc thư mục
+IF -> ID -> EX -> MEM -> WB
 
-```
+Mục tiêu của dự án là chứng minh đúng chức năng datapath, forwarding và xử lý hazard bằng bộ testbench theo nhóm chức năng, kèm waveform GTKWave để phân tích tín hiệu nội bộ theo chu kỳ.
+
+## 1) Tính năng chính
+
+- Pipeline register đầy đủ: IF/ID, ID/EX, EX/MEM, MEM/WB.
+- Forwarding Unit cho ALU input A/B:
+  - EX/MEM -> EX (ưu tiên cao hơn)
+  - MEM/WB -> EX
+  - Bỏ qua rd = x0
+  - Chặn forward load ở EX/MEM (load-use cần stall)
+- Hazard handling:
+  - Load-use stall: giữ PC + IF/ID, chèn bubble vào ID/EX.
+  - Control hazard: flush khi branch/jump được lấy.
+- Write-back mux hỗ trợ nhiều nguồn:
+  - ALU result
+  - Memory result
+  - PC+4
+  - LUI
+  - AUIPC
+- Debug waveform signals (dbg\_\*) để quan sát nhanh toàn bộ stage.
+
+## 2) Cấu trúc thư mục
+
+```text
 riscv_pipeline/
-├── src/                 # Mã nguồn RTL
-│   ├── pp_top.v         # Top-level pipeline
-│   ├── forwarding_unit.v
-│   ├── alu.v
-│   ├── regfile.v
-│   ├── imm_gen.v
-│   ├── branch_comp.v
-│   ├── controller.v
-│   ├── imem.v
-│   └── dmem.v
-├── tb/                  # Testbench
-│   └── tb_pp_top.v
-├── mem/                 # Khởi tạo bộ nhớ (hex)
-│   ├── instr_mem.hex
-│   └── data_mem.hex
-└── sim/                 # Kết quả mô phỏng (tạo khi chạy simulator)
+|- src/
+|  |- pp_top.v
+|  |- forwarding_unit.v
+|  |- alu.v
+|  |- branch_comp.v
+|  |- controller.v
+|  |- imm_gen.v
+|  |- regfile.v
+|  |- imem.v
+|  `- dmem.v
+|- tb/
+|  |- tb_pp_top.v
+|  |- tb_reset_basic.v
+|  |- tb_rtype_itype_basic.v
+|  |- tb_forward_exmem_a_b.v
+|  |- tb_forward_memwb.v
+|  |- tb_load_use_stall.v
+|  |- tb_branch_flush.v
+|  |- tb_store_load_wb.v
+|  |- tb_branch_data_hazard.v
+|  |- tb_x0_cornercase.v
+|  `- tb_dependency_chain.v
+|- mem/
+|  |- instr_mem.hex
+|  `- data_mem.hex
+`- sim/
+   |- *.out
+   |- *.vcd
+   |- pp_top_debug.gtkw
+   `- pp_top_grouped.gtkw
 ```
 
-## Tính năng chính
+## 3) Yêu cầu môi trường
 
-- **Pipeline**: IF/ID, ID/EX, EX/MEM, MEM/WB; PC và thanh ghi đồng bộ theo `clk`.
-- **Forwarding**: `forwarding_unit.v` sinh `forward_a` / `forward_b` (ưu tiên EX/MEM trước MEM/WB), áp dụng cho toán hạng ALU và dữ liệu store.
-- **Hazard**:
-  - **Load-use**: dừng PC và IF/ID, chèn bubble vào ID/EX khi lệnh load ở EX cần được dùng ngay ở ID.
-  - **Control**: khi branch/jump taken, làm sạch IF/ID (NOP) và bubble ID/EX.
+- Windows + PowerShell (hoặc shell tương đương)
+- Icarus Verilog:
+  - `iverilog`
+  - `vvp`
+- GTKWave
 
-Chạy mô phỏng từ **thư mục gốc dự án** (`riscv_pipeline/`) để đường dẫn `mem/instr_mem.hex` và `mem/data_mem.hex` trong `imem.v` / `dmem.v` khớp với file thật.
+Ví dụ đường dẫn đang dùng:
 
-## File bộ nhớ
+- `C:\iverilog\bin\iverilog.exe`
+- `C:\iverilog\bin\vvp.exe`
+- `C:\iverilog\gtkwave\bin\gtkwave.exe`
 
-- **`mem/instr_mem.hex`**: mỗi dòng một từ 32-bit (hex), không prefix `0x`. `imem` đọc theo chỉ số từ `addr[31:2]`.
-- **`mem/data_mem.hex`**: byte-hex theo thứ tự bộ nhớ byte (dùng cho `$readmemh` trong `dmem`).
+## 4) Cách chạy mô phỏng
 
-## Mô phỏng
+Luôn chạy từ thư mục gốc dự án để `mem/instr_mem.hex` và `mem/data_mem.hex` được nạp đúng.
 
-### Icarus Verilog (iverilog / vvp)
+### 4.1 Chạy test tổng quát
 
-```bash
-cd riscv_pipeline
-iverilog -g2012 -o sim/a.out src/*.v tb/tb_pp_top.v
-vvp sim/a.out
+```powershell
+cd E:\riscv_pipeline
+C:\iverilog\bin\iverilog.exe -g2012 -o sim\pp_tb.out tb\tb_pp_top.v src\alu.v src\branch_comp.v src\controller.v src\dmem.v src\forwarding_unit.v src\imem.v src\imm_gen.v src\pp_top.v src\regfile.v
+C:\iverilog\bin\vvp.exe sim\pp_tb.out
 ```
 
-### ModelSim / Questa (ví dụ)
+### 4.2 Chạy một testbench bất kỳ
 
-```bash
-cd riscv_pipeline
-vlog src/*.v tb/tb_pp_top.v
-vsim -c tb_pp_top -do "run -all; quit"
+Ví dụ với `tb_branch_data_hazard`:
+
+```powershell
+cd E:\riscv_pipeline
+C:\iverilog\bin\iverilog.exe -g2012 -o sim\tb_branch_data_hazard.out tb\tb_branch_data_hazard.v src\alu.v src\branch_comp.v src\controller.v src\dmem.v src\forwarding_unit.v src\imem.v src\imm_gen.v src\pp_top.v src\regfile.v
+C:\iverilog\bin\vvp.exe sim\tb_branch_data_hazard.out
 ```
 
-Điều chỉnh lệnh compile theo công cụ bạn dùng; module đỉnh testbench là `tb_pp_top`.
+Kết quả waveform sẽ nằm ở `sim/tb_branch_data_hazard.vcd`.
 
-## Yêu cầu
+## 5) Chạy toàn bộ test suite chức năng
 
-- Trình biên dịch/mô phỏng Verilog (SystemVerilog không bắt buộc; code dùng Verilog-2001 tương thích rộng).
+Các testbench chức năng đã có:
 
-## Giấy phép
+- `tb_reset_basic`
+- `tb_rtype_itype_basic`
+- `tb_forward_exmem_a_b`
+- `tb_forward_memwb`
+- `tb_load_use_stall`
+- `tb_branch_flush`
+- `tb_store_load_wb`
+- `tb_branch_data_hazard`
+- `tb_x0_cornercase`
+- `tb_dependency_chain`
 
-Dự án học tập / tham khảo — thêm giấy phép nếu cần phân phối lại.
-# riscv-pipeline
+Các test này được thiết kế để chứng minh riêng từng nhóm: reset/init, luồng cơ bản, forwarding, stall, flush branch, memory/WB và corner cases.
+
+## 6) Xem waveform bằng GTKWave
+
+### 6.1 Mở VCD trực tiếp
+
+```powershell
+cd E:\riscv_pipeline
+C:\iverilog\gtkwave\bin\gtkwave.exe sim\tb_branch_data_hazard.vcd
+```
+
+### 6.2 Mở layout có sẵn
+
+```powershell
+cd E:\riscv_pipeline
+C:\iverilog\gtkwave\bin\gtkwave.exe sim\pp_top_debug.gtkw
+C:\iverilog\gtkwave\bin\gtkwave.exe sim\pp_top_grouped.gtkw
+```
+
+Nhóm tín hiệu quan trọng nên theo dõi:
+
+- `dbg_pc`, `dbg_pc_next`
+- `dbg_if_id_*`, `dbg_id_ex_*`
+- `dbg_fwd_a`, `dbg_fwd_b`
+- `dbg_stall`, `dbg_flush`, `dbg_br_take`
+- `dbg_mem_*`
+- `dbg_wb_data`
+
+## 7) Gợi ý quy trình git
+
+```powershell
+cd E:\riscv_pipeline
+git status
+git add src tb README.md
+git commit -m "test: add functional pipeline/forwarding verification benches"
+git push
+```
+
+Lưu ý: thư mục `sim/` chứa file sinh ra khi mô phỏng; có thể cân nhắc đưa `*.out` và `*.vcd` vào `.gitignore` nếu không muốn commit artefact.
+
+## 8) Trạng thái hiện tại
+
+- RTL pipeline + forwarding đã chạy ổn định.
+- Test suite chức năng đã PASS.
+- GTKWave mở được cả VCD trực tiếp và save layout nhóm stage.
