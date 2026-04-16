@@ -10,8 +10,10 @@ module regfile (
 );
     reg [31:0] regs [0:31];
 
-    assign rd1 = (ra1 == 5'd0) ? 32'd0 : regs[ra1];
-    assign rd2 = (ra2 == 5'd0) ? 32'd0 : regs[ra2];
+    assign rd1 = (ra1 == 5'd0) ? 32'd0 :
+                 (we && (wa != 5'd0) && (wa == ra1)) ? wd : regs[ra1];
+    assign rd2 = (ra2 == 5'd0) ? 32'd0 :
+                 (we && (wa != 5'd0) && (wa == ra2)) ? wd : regs[ra2];
 
     integer i;
     initial begin

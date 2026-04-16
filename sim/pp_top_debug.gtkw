@@ -1,0 +1,51 @@
+[*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
+[dumpfile] "E:\\riscv_pipeline\\sim\\pp_top.vcd"
+[dumpfile_mtime] "Thu Apr 16 20:42:48 2026"
+[dumpfile_size] 34895
+[savefile] "E:\\riscv_pipeline\\sim\\pp_top_debug.gtkw"
+[timestart] 0
+[size] 1365 727
+[pos] -1 -1
+*-12.000000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[treeopen] tb_pp_top.
+[treeopen] tb_pp_top.dut.
+[sst_width] 220
+[signals_width] 180
+[sst_expanded] 1
+[sst_vpaned_height] 240
+@28
+tb_pp_top.clk
+tb_pp_top.rst
+tb_pp_top.cycle
+tb_pp_top.dut.dbg_pc[31:0]
+tb_pp_top.dut.dbg_instr_if[31:0]
+tb_pp_top.dut.dbg_pc_next[31:0]
+tb_pp_top.dut.dbg_if_id_pc[31:0]
+tb_pp_top.dut.dbg_if_id_instr[31:0]
+tb_pp_top.dut.dbg_id_imm[31:0]
+tb_pp_top.dut.dbg_id_rs1[4:0]
+tb_pp_top.dut.dbg_id_rs2[4:0]
+tb_pp_top.dut.dbg_id_rd[4:0]
+tb_pp_top.dut.dbg_rs1_data[31:0]
+tb_pp_top.dut.dbg_rs2_data[31:0]
+tb_pp_top.dut.dbg_id_ex_pc[31:0]
+tb_pp_top.dut.dbg_id_ex_opc[6:0]
+tb_pp_top.dut.dbg_alu_a[31:0]
+tb_pp_top.dut.dbg_alu_b[31:0]
+tb_pp_top.dut.dbg_alu_sel[3:0]
+tb_pp_top.dut.dbg_alu_y[31:0]
+tb_pp_top.dut.dbg_br_take
+tb_pp_top.dut.dbg_fwd_a[1:0]
+tb_pp_top.dut.dbg_fwd_b[1:0]
+tb_pp_top.dut.dbg_stall
+tb_pp_top.dut.dbg_flush
+tb_pp_top.dut.dbg_reg_wen
+tb_pp_top.dut.dbg_wb_sel[2:0]
+tb_pp_top.dut.dbg_wb_data[31:0]
+tb_pp_top.dut.dbg_mem_we
+tb_pp_top.dut.dbg_mem_re
+tb_pp_top.dut.dbg_mem_addr[31:0]
+tb_pp_top.dut.dbg_mem_wdata[31:0]
+tb_pp_top.dut.dbg_mem_rdata[31:0]
+[pattern_trace] 1
+[pattern_trace] 0

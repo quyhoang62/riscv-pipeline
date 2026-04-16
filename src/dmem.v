@@ -13,10 +13,28 @@ module dmem #(
     reg [7:0] mem [0:(DEPTH_WORDS*4)-1];
 
     integer i;
+    integer fd;
+    integer code;
+    integer idx;
+    reg [31:0] byte_buf;
     initial begin
         for (i = 0; i < (DEPTH_WORDS*4); i = i + 1)
             mem[i] = 8'd0;
-        $readmemh(MEMFILE, mem);
+
+        fd = $fopen(MEMFILE, "r");
+        if (fd != 0) begin
+            idx = 0;
+            while (!$feof(fd) && (idx < (DEPTH_WORDS*4))) begin
+                code = $fscanf(fd, "%h\n", byte_buf);
+                if (code == 1) begin
+                    mem[idx] = byte_buf[7:0];
+                    idx = idx + 1;
+                end else begin
+                    code = $fgetc(fd);
+                end
+            end
+            $fclose(fd);
+        end
     end
 
     wire [31:0] a = addr;

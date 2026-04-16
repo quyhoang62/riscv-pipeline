@@ -135,6 +135,7 @@ module pp_top (
         .id_ex_rs2(id_ex_rs2_q),
         .ex_mem_rd(ex_mem_rd_q),
         .ex_mem_regwrite(ex_mem_regwrite_q),
+        .ex_mem_memtoreg(ex_mem_memtoreg_q),
         .mem_wb_rd(mem_wb_rd_q),
         .mem_wb_regwrite(mem_wb_regwrite_q),
         .forward_a(fwd_a),
@@ -142,19 +143,24 @@ module pp_top (
     );
 
     wire [31:0] wb_result = wb_wdata;
+    wire [31:0] ex_mem_fwd_val =
+        ex_mem_jump_q  ? ex_mem_pc4_q :
+        ex_mem_lui_q   ? ex_mem_imm_q :
+        ex_mem_auipc_q ? (ex_mem_pc_q + ex_mem_imm_q) :
+                         ex_mem_alu_q;
 
     reg [31:0] ex_op_a_raw, ex_op_b_raw;
     always @(*) begin
         // A operand
         case (fwd_a)
-            2'b10: ex_op_a_raw = ex_mem_alu_q;
+            2'b10: ex_op_a_raw = ex_mem_fwd_val;
             2'b01: ex_op_a_raw = wb_result;
             default: ex_op_a_raw = id_ex_rs1_val_q;
         endcase
 
         // B operand (pre-ALUSrc)
         case (fwd_b)
-            2'b10: ex_op_b_raw = ex_mem_alu_q;
+            2'b10: ex_op_b_raw = ex_mem_fwd_val;
             2'b01: ex_op_b_raw = wb_result;
             default: ex_op_b_raw = id_ex_rs2_val_q;
         endcase
@@ -226,6 +232,43 @@ module pp_top (
     wire [31:0] ex_target = id_ex_jalr_q ? ex_jalr_target :
                             id_ex_jump_q ? ex_jal_target  :
                                            ex_branch_target;
+
+    // =========================
+    // Debug signals for waveform viewing
+    // =========================
+    wire [31:0] dbg_pc         = pc_q;
+    wire [31:0] dbg_instr_if   = if_instr;
+    wire [31:0] dbg_pc_next    = ex_taken ? ex_target : pc_plus4;
+    wire [31:0] dbg_if_id_pc   = if_id_pc_q;
+    wire [31:0] dbg_if_id_instr= if_id_instr_q;
+    wire [31:0] dbg_id_imm     = id_imm;
+    wire [4:0]  dbg_id_rs1     = id_rs1;
+    wire [4:0]  dbg_id_rs2     = id_rs2;
+    wire [4:0]  dbg_id_rd      = id_rd;
+    wire [31:0] dbg_rs1_data   = id_rs1_val;
+    wire [31:0] dbg_rs2_data   = id_rs2_val;
+    wire [31:0] dbg_id_ex_pc   = id_ex_pc_q;
+    wire [6:0]  dbg_id_ex_opc  = id_ex_opcode_q;
+    wire [31:0] dbg_alu_a      = ex_op_a_raw;
+    wire [31:0] dbg_alu_b      = ex_op_b;
+    wire [31:0] dbg_alu_y      = ex_alu_y;
+    wire [3:0]  dbg_alu_sel    = ex_alu_ctrl;
+    wire        dbg_br_take    = ex_branch_take;
+    wire [1:0]  dbg_fwd_a      = fwd_a;
+    wire [1:0]  dbg_fwd_b      = fwd_b;
+    wire        dbg_stall      = load_use_stall;
+    wire        dbg_flush      = ex_taken;
+    wire        dbg_reg_wen    = wb_regwrite;
+    wire [2:0]  dbg_wb_sel     = mem_wb_jump_q ? 3'd4 :
+                                 mem_wb_lui_q ? 3'd3 :
+                                 mem_wb_auipc_q ? 3'd2 :
+                                 mem_wb_memtoreg_q ? 3'd1 : 3'd0;
+    wire [31:0] dbg_wb_data    = wb_wdata;
+    wire        dbg_mem_we     = ex_mem_memwrite_q;
+    wire        dbg_mem_re     = ex_mem_memread_q;
+    wire [31:0] dbg_mem_addr   = ex_mem_alu_q;
+    wire [31:0] dbg_mem_wdata  = ex_mem_rs2_store_q;
+    wire [31:0] dbg_mem_rdata  = mem_rdata;
 
     // =========================
     // MEM stage
